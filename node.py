@@ -1,20 +1,22 @@
-from dataset import Dataset
 from typing import Optional, Union
 
 
 class Leaf:
-    def __init__(self, parent, label: str):
-        self._parent: Node = parent
+    def __init__(self, label: str):
         self._label = label
-
-    @property
-    def parent(self):
-        return self._parent
 
     @property
     def label(self):
         return self._label
 
+    def __str__(self):
+        return self._label
+
+    def __repr__(self):
+        return f"Leaf({self._label})"
+
+
+'''
     def __str__(self):
         branch_string: str = ""
         node: Node = self._parent
@@ -27,59 +29,32 @@ class Leaf:
 
     def __repr__(self):
         return self.__str__()
+'''
 
 
 class Node:
 
-    def __init__(self, parent, dataset: Dataset, parent_feature_value: Optional[str]):
-        self._dataset: Optional[Dataset] = dataset
-        # TODO - hide the dataset, exposing only needed methods to clients
-        self._parent: Node = parent
-        self._children: list[Union[Leaf, Node]] = []
-        self._parent_feature_value: Optional[str] = parent_feature_value
-        self._subtree_feature_name: Optional[str] = None
+    def __init__(self, feature: str, most_frequent_label: str):
+        self.__feature = feature;
+        self.__most_frequent_label = most_frequent_label
+        self.__children: dict[str, Union[Node, Leaf]] = {}
 
-    @staticmethod
-    def Root(dataset: Dataset):
-        return Node(None, dataset, None)
+    def add_child(self, branch_value: str, child):
+        self.__children[branch_value] = child
 
-    def is_root(self):
-        return self._parent is None and self._parent_feature_value is None
-
-    @property
-    def subtree_feature_name(self):
-        return self._subtree_feature_name
-
-    @property
-    def parent_feature_value(self):
-        return self._parent_feature_value
-
-    @property
-    def dataset(self):
-        return self._dataset
-
-    @property
-    def parent(self):
-        return self._parent
-
-    def add_child(self, child):
-        self._children.append(child)
-
-    def __next__(self):
-        return self.__iter__().__next__()
+    def children(self):
+        yield from self.__children.items()
 
     def __iter__(self):
-        return self._children.__iter__()
+        yield from self.__children.values()
 
-    @subtree_feature_name.setter
-    def subtree_feature_name(self, value):
-        self._subtree_feature_name = value
+    @property
+    def feature(self):
+        return self.__feature
 
-    def __str__(self):
-        if self.is_root():
-            return ""
-        else:
-            return self._parent._subtree_feature_name + "=" + self._parent_feature_value
+    @property
+    def most_frequent_label(self):
+        return self.__most_frequent_label
 
-    def __repr__(self):
-        return self.__str__()
+    # __str__ is kinda iffy
+

@@ -2,7 +2,8 @@ from typing import Union, Optional
 
 from confusion_matrix import ConfusionMatrix
 from dataset import Dataset
-from TreeRefactored import Node, Leaf
+from node import Node, Leaf
+
 
 class DecisionTree:
     def __init__(self, max_depth: Optional[int] = None):
@@ -18,8 +19,10 @@ class DecisionTree:
         :return: an instance of self
         """
 
-        self._root = Node.Root(data)
-        self.__id3(self._root, 0)
+        # self._root = Node.Root(data)
+        # self.__id3(self._root, 0)
+
+        self._root = self.__id3_returnsnode(data, data, 0)
 
         self.__save_fit(self._root)
 
@@ -29,7 +32,7 @@ class DecisionTree:
         if isinstance(node, Leaf):
             self._branches += str(node) + "\n"
         else:
-            for child in node:
+            for child in node:  # TODO - check if something breaks
                 self.__save_fit(child)
 
     def __id3(self, node: Node, depth: int):
@@ -58,25 +61,22 @@ class DecisionTree:
             # create a leaf node representing the most frequent observed value
             node.add_child(Leaf(node, node.dataset.most_frequent_label()))
 
-    def __id3_returnsnode(self, dataset: Dataset, parent_dataset: Dataset, depth: int, feature_value: str) -> Union[Node, Leaf]:
-        # TODO - is y really needed actually lmao
+    def __id3_returnsnode(self, dataset: Dataset, parent_dataset: Dataset, depth: int) -> Union[Node, Leaf]:
         if self._max_depth is None or depth < self._max_depth:
             if len(dataset) == 0:
-                # TODO - kinda don't even need the parent tho
                 return Leaf(parent_dataset.most_frequent_label())
             elif len(dataset.label_space) == 1 or len(dataset.feature_names) == 0:
                 return Leaf(dataset.most_frequent_label())
             else:
                 mdf: str = dataset.most_discriminatory_feature()
                 sub_datasets: dict[str, Dataset] = dataset.group_by_feature(mdf)
-                node: Node = Node(mdf, feature_value, dataset.most_frequent_label())
+                node: Node = Node(mdf, dataset.most_frequent_label())
                 for feature_value, sub_dataset in sub_datasets.items():
-                    child_node = self.__id3_returnsnode(sub_dataset, dataset, depth+1, feature_value)
-                    node.add_child(child_node)
+                    child_node = self.__id3_returnsnode(sub_dataset, dataset, depth + 1)
+                    node.add_child(feature_value, child_node)
                 return node
         else:
             return Leaf(dataset.most_frequent_label())
-
 
     def predict(self, dataset: Dataset) -> dict:
         """predicts the class labels of the given test set, based on a previously fitted model.
@@ -88,7 +88,7 @@ class DecisionTree:
         predicted_values: list[str] = []
         for example, label in dataset:
             # predict the example
-            predicted_values.append(self.__example_label(example, self._root))
+            predicted_values.append(self.__label_example_refactored(example, self._root))
 
         prediction_params["predictions"] = predicted_values
 
@@ -119,6 +119,7 @@ class DecisionTree:
     def __label_example_refactored(self, example: dict[str, str], node: Union[Node, Leaf]) -> str:
         if isinstance(node, Leaf):
             return node.label
-        for child in node:
-            if isinstance(child, Leaf) or \
-                    example[node.feature_name]
+        for branch_value, child_node in node.children():
+            if node.feature in example and example[node.feature] == branch_value:
+                return self.__label_example_refactored(example, child_node)
+        return node.most_frequent_label

@@ -2,7 +2,6 @@ import csv
 import math
 
 from dataset import Dataset
-from node import Node
 
 
 def load_dataset(dataset_path: str) -> Dataset:
